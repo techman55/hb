@@ -18,18 +18,18 @@
 
   "vars": {
     "APP_URL": "https://dibs.school",
-    "EMAIL_FROM": "Dibs <login@dibs.school>",
+    "EMAIL_FROM": "Dibs <login@b.techman.dev>",
     "SUPPORT_EMAIL": "support@dibs.school",
-    "TWILIO_PHONE_NUMBER": "",
+    "TWILIO_PHONE_NUMBER": "+15044590324",
     "OPENAI_MODEL": "gpt-6.1-sol",
-    "ADMIN_EMAILS": ""
+    "ADMIN_EMAILS": "jack@techman.dev"
   },
 
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "dibs-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "76d8b818-af40-426b-8968-b3d1a47115df",
       "migrations_dir": "migrations"
     }
   ],
