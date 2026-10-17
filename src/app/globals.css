@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f6f3;
+  --surface: #ffffff;
+  --surface-2: #efefeb;
+  --ink: #0b0b0f;
+  --ink-inverse: #ffffff;
+  --muted: #6b6b76;
+  --line: #e6e6e1;
+  --accent: #6d4aff;
+  --accent-ink: #ffffff;
+  --accent-soft: #efeaff;
+  --success: #0f9f5f;
+  --success-soft: #e3f6ec;
+  --warn: #b25e09;
+  --warn-soft: #fff1dc;
+  --danger: #d93a3f;
+  --danger-soft: #fde8e8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0b0f;
+    --surface: #16161c;
+    --surface-2: #202028;
+    --ink: #f4f4f6;
+    --ink-inverse: #0b0b0f;
+    --muted: #9b9ba7;
+    --line: #2a2a33;
+    --accent: #8f73ff;
+    --accent-soft: #241d42;
+    --success: #34c27f;
+    --success-soft: #11291e;
+    --warn: #f0a542;
+    --warn-soft: #2e2212;
+    --danger: #f06368;
+    --danger-soft: #2f1416;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-inverse: var(--ink-inverse);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --animate-shimmer: shimmer 1.6s linear infinite;
+
+  @keyframes shimmer {
+    from {
+      background-position: -200% 0;
+    }
+    to {
+      background-position: 200% 0;
+    }
+  }
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* Hide scrollbars on horizontal chip rows while keeping them scrollable. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--line) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+}
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top), 0.5rem);
+}
+
+/* Inputs that look like plain text until focused; used by the listing editor. */
+.ghost-input {
+  background: transparent;
+  border-radius: 0.5rem;
+  outline: none;
+  transition: background-color 120ms;
+}
+.ghost-input:hover {
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+}
+.ghost-input:focus {
+  background: var(--surface-2);
+}
+
+input[type="range"].dibs-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--ink) 0%,
+    var(--ink) var(--fill, 50%),
+    var(--line) var(--fill, 50%),
+    var(--line) 100%
+  );
+}
+input[type="range"].dibs-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+  cursor: grab;
+}
+input[type="range"].dibs-range::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  cursor: grab;
+}

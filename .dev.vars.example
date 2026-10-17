@@ -1,0 +1,15 @@
+# Copy to .dev.vars for local development. Production secrets are set with `npx wrangler secret put NAME`.
+# See docs/ENVIRONMENT.md for what each one does and where to get it.
+
+AUTH_SECRET=
+RESEND_API_KEY=
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+OPENAI_API_KEY=
+SIGHTENGINE_API_USER=
+SIGHTENGINE_API_SECRET=
+
+# Local overrides of wrangler.jsonc vars
+APP_URL=http://localhost:3000
+ADMIN_EMAILS=
+NEXTJS_ENV=development

@@ -1,0 +1,50 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dibs",
+  // Custom entry: wraps the OpenNext handler, adds the chat WebSocket route,
+  // the cron handler and the ChatRoom Durable Object.
+  "main": "worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": { "enabled": true },
+  "upload_source_maps": true,
+
+  // Attach the production domain once the zone is on this Cloudflare account.
+  // "routes": [{ "pattern": "dibs.school", "custom_domain": true }],
+
+  "vars": {
+    "APP_URL": "https://dibs.school",
+    "EMAIL_FROM": "Dibs <login@dibs.school>",
+    "SUPPORT_EMAIL": "support@dibs.school",
+    "TWILIO_PHONE_NUMBER": "",
+    "OPENAI_MODEL": "gpt-6.1-sol",
+    "ADMIN_EMAILS": ""
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dibs-db",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "UPLOADS", "bucket_name": "dibs-uploads" },
+    { "binding": "MEDIA", "bucket_name": "dibs-media" }
+  ],
+  "images": { "binding": "IMAGES" },
+  "durable_objects": {
+    "bindings": [{ "name": "CHAT_ROOM", "class_name": "ChatRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatRoom"] }],
+  "ratelimits": [
+    { "name": "AUTH_LIMITER", "namespace_id": "1001", "simple": { "limit": 8, "period": 60 } },
+    { "name": "AI_LIMITER", "namespace_id": "1002", "simple": { "limit": 6, "period": 60 } }
+  ],
+  "triggers": { "crons": ["*/15 * * * *"] }
+}
