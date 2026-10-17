@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { schools, type User } from "@/db/schema";
 import { db, env } from "@/lib/server";
 import { toPublicSchool } from "@/lib/schools/service";
+import { safeNext } from "@/lib/utils";
 import { createSession, deleteSession, SESSION_TTL, sessionCookieName, validateSessionToken } from "./session";
 
 export const getCurrentUser = cache(async (): Promise<User | null> => {
@@ -13,11 +14,23 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   return validateSessionToken(db(), jar.get(sessionCookieName(env()))?.value);
 });
 
-/** Pages and actions that need a signed-in, onboarded user. */
+/** The page being rendered, as set by src/proxy.ts. */
+async function requestedPath() {
+  const path = safeNext((await headers()).get("x-dibs-path"));
+  return path === "/" ? null : path;
+}
+
+/**
+ * Pages and actions that need a signed-in, onboarded user. Signed-out visitors go to /login and
+ * come back to the page they asked for (`next`, defaulting to the current page).
+ */
 export async function requireUser(opts: { allowUnonboarded?: boolean; next?: string } = {}): Promise<User> {
   const user = await getCurrentUser();
-  if (!user) redirect(opts.next ? `/login?next=${encodeURIComponent(opts.next)}` : "/login");
-  if (!user.onboardedAt && !opts.allowUnonboarded) redirect("/welcome");
+  if (!user || (!user.onboardedAt && !opts.allowUnonboarded)) {
+    const next = safeNext(opts.next) ?? (await requestedPath());
+    const to = user ? "/welcome" : "/login";
+    redirect(next ? `${to}?next=${encodeURIComponent(next)}` : to);
+  }
   return user;
 }
 

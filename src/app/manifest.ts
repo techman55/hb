@@ -1,6 +1,11 @@
 import type { MetadataRoute } from "next";
 
-export default function manifest(): MetadataRoute.Manifest {
+// Ask the browser to open dibs.school links in the installed app instead of a tab. Chrome on
+// Android does this for installed apps already; desktop Chrome reads `handle_links` (not in
+// Next's types yet). iOS ignores both, so friend codes can also be scanned inside the app.
+type Manifest = MetadataRoute.Manifest & { handle_links?: "auto" | "preferred" | "not-preferred" };
+
+export default function manifest(): Manifest {
   return {
     name: "Dibs",
     short_name: "Dibs",
@@ -9,6 +14,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     scope: "/",
     display: "standalone",
+    handle_links: "preferred",
+    launch_handler: { client_mode: ["navigate-existing", "auto"] },
     background_color: "#f6f6f3",
     theme_color: "#f6f6f3",
     icons: [

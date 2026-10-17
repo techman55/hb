@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { Check, Globe, Lock, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
 import { Textarea } from "@/components/ui/field";
 import { cn, formatMoney } from "@/lib/utils";
 import { FlowIsland } from "./flow-island";
@@ -92,6 +93,7 @@ function BottomBar({ children }: { children: React.ReactNode }) {
 
 export function ListingFlow({ initial }: { initial: FlowInitial }) {
   const router = useRouter();
+  const ask = useConfirm();
   const listingRef = useRef<string | null>(initial.listingId);
   const creating = useRef<Promise<string> | null>(null);
   const [listingId, setListingId] = useState(initial.listingId);
@@ -309,7 +311,21 @@ export function ListingFlow({ initial }: { initial: FlowInitial }) {
         label={LABELS[step]}
         progress={progress}
         onBack={backTo ? () => setStep(backTo) : undefined}
-        onClose={() => router.push("/lending")}
+        onClose={async () => {
+          // The draft is saved as you go; only a photo still uploading would be lost.
+          if (
+            uploading &&
+            !(await ask({
+              title: "Leave while a photo uploads?",
+              description: "Your draft is saved, but the photo that's still uploading will be lost.",
+              confirmLabel: "Leave",
+              cancelLabel: "Stay",
+            }))
+          ) {
+            return;
+          }
+          router.push("/lending");
+        }}
         next={next}
       />
       <PhotoTray open={trayOpen} onOpenChange={setTrayOpen} photos={photos} onRemove={removePhoto} onCover={coverPhoto} />
@@ -615,7 +631,7 @@ function DoneStep({
         {isPrivate && live
           ? `Only you can see ${title}. Change who can see it any time from Lending.`
           : live
-            ? `${title} is up. You'll get a notification when someone calls dibs.`
+            ? `${title} is up. Requests show up at the top of Lending.`
             : "We're making sure your photos are real. It goes live on its own once they clear, and you can follow along under Pending."}
       </p>
       <BottomBar>

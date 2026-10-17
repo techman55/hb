@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { and, eq } from "drizzle-orm";
-import { Search } from "lucide-react";
 import { categoryFollows } from "@/db/schema";
 import { CampusToggle, CategoryChips } from "@/components/listing/feed-controls";
 import { FollowCategory } from "@/components/listing/follow-category";
 import { ListingGrid } from "@/components/listing/listing-card";
+import { SearchBox } from "@/components/listing/search-box";
 import { EmptyState } from "@/components/ui/bits";
 import { getUserSchool, requireUser } from "@/lib/auth/current";
 import { onlyMyCampus } from "@/lib/campus-pref";
@@ -30,18 +30,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
 
   return (
     <div className="flex flex-col gap-5">
-      <form action="/search" className="relative">
-        <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted" />
-        <input
-          name="q"
-          defaultValue={q}
-          autoFocus={!q && !category}
-          placeholder="Search calculators, textbooks, gear…"
-          className="h-12 w-full rounded-full border border-line bg-surface pl-12 pr-4 text-base outline-none focus:border-ink"
-          enterKeyHint="search"
-        />
-        {category && <input type="hidden" name="cat" value={category} />}
-      </form>
+      <SearchBox initial={q} autoFocus={!q && !category} />
 
       <CategoryChips active={category} />
 

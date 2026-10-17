@@ -39,7 +39,7 @@ Every value the app reads, where it's set, and where to get it. Nothing else is 
 | `DB` | D1 database `dibs-db` | `npx wrangler d1 create dibs-db`, then paste the id into `wrangler.jsonc` |
 | `UPLOADS` | R2 bucket `dibs-uploads` (private: original photos, appeal evidence) | `npx wrangler r2 bucket create dibs-uploads` |
 | `MEDIA` | R2 bucket `dibs-media` (resized photos with metadata stripped, school logos) | `npx wrangler r2 bucket create dibs-media` |
-| `EMAIL` | Cloudflare Email Service `send_email` binding (all outgoing mail) | Onboard `dibs.school` in the dashboard (checklist step 6) |
+| `EMAIL` | Cloudflare Email Service `send_email` binding. Sends the only emails Dibs sends: sign-in links, pickup/return-day reminders, rental receipts (at pickup and at return), and access-appeal decisions. | Onboard `dibs.school` in the dashboard (checklist step 6) |
 | `IMAGES` | Cloudflare Images binding (resize, strip EXIF/GPS) | Nothing to create. The free allowance covers 5,000 unique transformations/month. |
 | `CHAT_ROOM` | Durable Object (live chat) | Created on first deploy (migration `v1`) |
 | `AUTH_LIMITER`, `AI_LIMITER` | Rate limiters | Created on deploy |

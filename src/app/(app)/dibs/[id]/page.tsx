@@ -42,7 +42,7 @@ export default async function RenterRentalPage({ params }: PageProps<"/dibs/[id]
 
       {rental.status === "requested" && (
         <p className="rounded-3xl bg-accent-soft px-5 py-4 text-[15px] text-accent">
-          Waiting for {owner} to accept. You&apos;ll get an email either way, and you can chat in the meantime.
+          Waiting for {owner} to accept. Their answer shows up here and in chat, and you can message them in the meantime.
         </p>
       )}
 

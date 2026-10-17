@@ -2,7 +2,6 @@ import { and, eq } from "drizzle-orm";
 import type { DB } from "@/db";
 import { listingPhotos, listings } from "@/db/schema";
 import type { Env } from "@/lib/env";
-import { notify } from "@/lib/notify";
 
 const CLEAR = new Set(["passed", "approved"]);
 
@@ -25,7 +24,6 @@ export async function recomputeListingStatus(env: Env, db: DB, listingId: string
       .update(listings)
       .set({ status: "active", publishedAt: listing.publishedAt ?? new Date(), updatedAt: new Date() })
       .where(eq(listings.id, listingId));
-    if (listing.visibility !== "private") await notify.listingLive(env, db, listing.ownerId, listing);
     return "active";
   }
   if (!allClear && listing.status === "active") {

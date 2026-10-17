@@ -9,7 +9,7 @@ import { CodeInput } from "@/components/ui/code-input";
 
 type Detector = { detect(source: CanvasImageSource): Promise<{ rawValue: string }[]> };
 
-async function makeDetector(): Promise<Detector> {
+export async function makeDetector(): Promise<Detector> {
   const native = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => Detector }).BarcodeDetector;
   if (native) {
     try {

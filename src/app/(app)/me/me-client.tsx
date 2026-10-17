@@ -5,8 +5,10 @@ import QRCode from "qrcode";
 import { toast } from "sonner";
 import { Check, Copy, Share2 } from "lucide-react";
 import { CategoryIcon } from "@/components/category-icon";
+import { ScanFriendButton } from "@/components/friend-scanner";
 import { Button } from "@/components/ui/button";
 import { CodeInput } from "@/components/ui/code-input";
+import { useConfirm } from "@/components/ui/confirm";
 import { Input, Label } from "@/components/ui/field";
 import { CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
@@ -123,7 +125,7 @@ export function FriendCode({ url }: { url: string }) {
     <div className="flex items-center gap-4">
       <div className="size-28 shrink-0 rounded-2xl bg-white p-2 [&>svg]:size-full" dangerouslySetInnerHTML={{ __html: svg }} />
       <div className="min-w-0">
-        <p className="text-sm text-muted">Friends can scan this or open your link to add you.</p>
+        <p className="text-sm text-muted">Friends can scan this or open your link to add you. To add someone, scan their code here.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button size="sm" variant="secondary" onClick={copy}>
             {copied ? <Check className="size-4" /> : <Copy className="size-4" />} {copied ? "Copied" : "Copy link"}
@@ -133,6 +135,7 @@ export function FriendCode({ url }: { url: string }) {
               <Share2 className="size-4" /> Share
             </Button>
           )}
+          <ScanFriendButton />
         </div>
       </div>
     </div>
@@ -141,6 +144,7 @@ export function FriendCode({ url }: { url: string }) {
 
 export function FriendButtons({ otherId, state }: { otherId: string; state: "incoming" | "friends" | "outgoing" | "none" }) {
   const [pending, start] = useTransition();
+  const ask = useConfirm();
   const act = (a: "add" | "accept" | "decline" | "remove") =>
     start(async () => {
       const res = await friendAction(otherId, a);
@@ -160,7 +164,22 @@ export function FriendButtons({ otherId, state }: { otherId: string; state: "inc
   }
   if (state === "friends") {
     return (
-      <Button size="sm" variant="ghost" disabled={pending} onClick={() => confirm("Remove friend?") && act("remove")}>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={pending}
+        onClick={() =>
+          ask({
+            title: "Remove friend?",
+            description: "You'll stop seeing each other's friends-only listings. You can add each other again anytime.",
+            confirmLabel: "Remove",
+            action: async () => {
+              const res = await friendAction(otherId, "remove");
+              return res.ok ? null : res.error;
+            },
+          })
+        }
+      >
         Friends
       </Button>
     );

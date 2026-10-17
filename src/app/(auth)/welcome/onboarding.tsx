@@ -20,11 +20,13 @@ export function Onboarding({
   initialName,
   phoneVerified,
   school,
+  next,
 }: {
   email: string;
   initialName: string;
   phoneVerified: boolean;
   school: SchoolLike & { name: string };
+  next: string | null;
 }) {
   const [step, setStep] = useState<Step>("name");
   const [name, setName] = useState(initialName);
@@ -183,7 +185,7 @@ export function Onboarding({
                   run(async () => {
                     const res = await setFollows(follows);
                     if (!res.ok) return res;
-                    await finishOnboarding();
+                    await finishOnboarding(next);
                   })
                 }
               >

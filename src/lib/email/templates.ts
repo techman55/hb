@@ -53,3 +53,47 @@ export function noticeEmail(opts: {
     text: [...opts.lines, opts.cta ? `${opts.cta.label}: ${opts.cta.url}` : ""].filter(Boolean).join("\n\n"),
   };
 }
+
+export function receiptEmail(opts: {
+  to: string;
+  subject: string;
+  intro: string;
+  rows: [label: string, value: string][];
+  total: { label: string; value: string };
+  footnote?: string;
+  links?: { label: string; url: string }[];
+  cta?: { label: string; url: string };
+}): Email {
+  const cell = "font-size:14px;padding:8px 0;border-bottom:1px solid #EEE";
+  const table =
+    `<tr><td style="padding:0 0 20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">` +
+    opts.rows
+      .map(([k, v]) => `<tr><td style="${cell};color:#6B6B76">${esc(k)}</td><td align="right" style="${cell};font-weight:600">${esc(v)}</td></tr>`)
+      .join("") +
+    `<tr><td style="font-size:16px;padding:12px 0 0;font-weight:700">${esc(opts.total.label)}</td><td align="right" style="font-size:16px;padding:12px 0 0;font-weight:800">${esc(opts.total.value)}</td></tr>` +
+    `</table></td></tr>`;
+  const links = opts.links?.length
+    ? `<tr><td style="padding:0 0 20px">${opts.links
+        .map(
+          (l) =>
+            `<a href="${esc(l.url)}" style="display:inline-block;margin:0 8px 8px 0;background:#F4F4F1;color:#0B0B0F;text-decoration:none;font-weight:600;padding:10px 18px;border-radius:999px;font-size:14px">${esc(l.label)}</a>`,
+        )
+        .join("")}</td></tr>`
+    : "";
+  const foot = opts.footnote ? p(`<span style="color:#6B6B76;font-size:13px">${esc(opts.footnote)}</span>`) : "";
+  return {
+    to: opts.to,
+    subject: opts.subject,
+    html: layout({ preheader: opts.intro, body: p(esc(opts.intro)) + table + links + foot, cta: opts.cta }),
+    text: [
+      opts.intro,
+      ...opts.rows.map(([k, v]) => `${k}: ${v}`),
+      `${opts.total.label}: ${opts.total.value}`,
+      ...(opts.links ?? []).map((l) => `${l.label}: ${l.url}`),
+      opts.footnote ?? "",
+      opts.cta ? `${opts.cta.label}: ${opts.cta.url}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+  };
+}

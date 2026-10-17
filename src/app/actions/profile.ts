@@ -11,6 +11,7 @@ import { addFriend, removeFriend, respondToFriend } from "@/lib/friends";
 import { toE164 } from "@/lib/phone";
 import { allow } from "@/lib/rate-limit";
 import { db, env } from "@/lib/server";
+import { safeNext } from "@/lib/utils";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -96,11 +97,11 @@ export async function toggleFollow(category: string, follow: boolean): Promise<R
   return { ok: true };
 }
 
-export async function finishOnboarding() {
+export async function finishOnboarding(next?: string | null) {
   const user = await requireUser({ allowUnonboarded: true });
   if (!user.name) redirect("/welcome");
   await db().update(users).set({ onboardedAt: new Date() }).where(eq(users.id, user.id));
-  redirect("/");
+  redirect(safeNext(next) ?? "/");
 }
 
 export async function friendAction(otherId: string, action: "add" | "accept" | "decline" | "remove"): Promise<Result> {

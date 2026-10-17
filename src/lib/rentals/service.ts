@@ -92,7 +92,6 @@ export async function requestDibs(
     `${firstName(renter.name, "Someone")} called dibs: ${input.days} ${input.days === 1 ? "day" : "days"} from ${when}, ${formatMoney(rental.totalCents!)} total.`,
   );
   if (rental.note) await addMessage(env, db, rental.id!, renter.id, rental.note);
-  await notify.dibsRequested(env, db, listing.ownerId, { rentalId: rental.id!, title: listing.title, renterName: renter.name, when });
   return { ok: true, rentalId: rental.id! };
 }
 
@@ -100,13 +99,11 @@ export async function respondToDibs(env: Env, db: DB, owner: User, rentalId: str
   const rental = await getRental(db, rentalId);
   if (!rental || rental.ownerId !== owner.id) return { ok: false, error: "Request not found." };
   if (rental.status !== "requested") return { ok: false, error: "This request was already answered." };
-  const listing = (await db.select().from(listings).where(eq(listings.id, rental.listingId)).limit(1))[0];
   const when = formatDay(rental.startDate);
 
   if (!accept) {
     await db.update(rentals).set({ status: "declined", respondedAt: new Date(), closedAt: new Date(), closedBy: owner.id }).where(eq(rentals.id, rentalId));
     await systemMessage(env, db, rentalId, `${firstName(owner.name, "The owner")} declined this request.`);
-    await notify.dibsAnswered(env, db, rental.renterId, { rentalId, title: listing?.title ?? "your item", accepted: false, when });
     return { ok: true };
   }
 
@@ -115,7 +112,6 @@ export async function respondToDibs(env: Env, db: DB, owner: User, rentalId: str
   }
   await db.update(rentals).set({ status: "accepted", respondedAt: new Date() }).where(eq(rentals.id, rentalId));
   await systemMessage(env, db, rentalId, `${firstName(owner.name, "The owner")} accepted. Pickup is ${when}. Agree on a spot below.`);
-  await notify.dibsAnswered(env, db, rental.renterId, { rentalId, title: listing?.title ?? "your item", accepted: true, when });
 
   // Other pending requests for overlapping dates can't happen now.
   const competing = await db
@@ -125,7 +121,6 @@ export async function respondToDibs(env: Env, db: DB, owner: User, rentalId: str
   for (const other of competing.filter((r) => rangesOverlap(r.startDate, r.days, rental.startDate, rental.days))) {
     await db.update(rentals).set({ status: "declined", respondedAt: new Date(), closedAt: new Date(), closedReason: "overlap" }).where(eq(rentals.id, other.id));
     await systemMessage(env, db, other.id, "Those dates were booked by someone else, so this request was closed.");
-    await notify.dibsAnswered(env, db, other.renterId, { rentalId: other.id, title: listing?.title ?? "your item", accepted: false, when: formatDay(other.startDate) });
   }
   return { ok: true };
 }
@@ -138,9 +133,6 @@ export async function cancelRental(env: Env, db: DB, user: User, rentalId: strin
   }
   await db.update(rentals).set({ status: "cancelled", closedAt: new Date(), closedBy: user.id }).where(eq(rentals.id, rentalId));
   await systemMessage(env, db, rentalId, `${firstName(user.name, "Someone")} cancelled.`);
-  const other = rental.renterId === user.id ? rental.ownerId : rental.renterId;
-  const listing = (await db.select({ title: listings.title }).from(listings).where(eq(listings.id, rental.listingId)).limit(1))[0];
-  await notify.rentalCancelled(env, db, other, { rentalId, title: listing?.title ?? "your rental", byName: user.name });
   return { ok: true };
 }
 
@@ -173,9 +165,11 @@ export async function confirmHandoff(env: Env, db: DB, owner: User, rentalId: st
     await db.update(rentals).set({ status: "active", pickedUpAt: new Date() }).where(eq(rentals.id, rentalId));
     const due = formatDay(addDays(rental.startDate, rental.days));
     await systemMessage(env, db, rentalId, `Picked up. Verified in person with ${renterName}. Due back ${due}.`);
+    await notify.receipt(env, db, rentalId, "pickup");
   } else {
     await db.update(rentals).set({ status: "returned", returnedAt: new Date(), closedAt: new Date() }).where(eq(rentals.id, rentalId));
     await systemMessage(env, db, rentalId, `Returned. Verified in person with ${renterName}. All done.`);
+    await notify.receipt(env, db, rentalId, "return");
   }
   return { ok: true, action };
 }

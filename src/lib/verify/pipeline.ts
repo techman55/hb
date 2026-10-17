@@ -11,7 +11,6 @@ import type { Env } from "@/lib/env";
 import { isDev } from "@/lib/env";
 import { analysisJpeg } from "@/lib/images";
 import { recomputeListingStatus } from "@/lib/listings/status";
-import { notify } from "@/lib/notify";
 import { getSettings } from "@/lib/settings";
 import { scanMetadata, type MetadataReport } from "./metadata";
 import { checkOpenAIProvenance, type ProvenanceResult } from "./openai-provenance";
@@ -151,7 +150,6 @@ async function finish(env: Env, db: DB, listingId: string, photoId: string, repo
   const listing = (await db.select().from(listings).where(eq(listings.id, listingId)).limit(1))[0];
   if (listing && listing.status !== "drafting") {
     await recomputeListingStatus(env, db, listingId);
-    if (status === "flagged") await notify.photoHeld(env, db, listing.ownerId, listing);
   }
   return status;
 }

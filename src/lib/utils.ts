@@ -49,3 +49,10 @@ export function timeAgo(date: Date | number): string {
   if (d < 7) return `${d}d`;
   return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
+
+/** A same-site path that's safe to redirect to after sign-in, or null. */
+export function safeNext(path: unknown): string | null {
+  if (typeof path !== "string" || !path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) return null;
+  if (/^\/(login|auth|welcome)(\/|\?|$)/.test(path)) return null;
+  return path.slice(0, 512);
+}

@@ -9,6 +9,7 @@ import { ListingEditor } from "@/components/flow/listing-editor";
 import { detailsValid, type Details } from "@/components/flow/types";
 import { photoContentType, uploadPhoto } from "@/components/flow/uploader";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
 import { Badge } from "@/components/ui/bits";
 import { Input, Label, Select } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,7 @@ export function ManageListing({ listing, photos: initialPhotos }: { listing: Lis
   const [maxDays, setMaxDays] = useState(listing.maxDays);
   const [saving, setSaving] = useState(false);
   const [pending, start] = useTransition();
+  const ask = useConfirm();
 
   const rejected = photos.filter((p) => p.scanStatus === "rejected");
 
@@ -236,13 +238,18 @@ export function ManageListing({ listing, photos: initialPhotos }: { listing: Lis
           variant="ghost"
           className="text-danger"
           disabled={pending}
-          onClick={() => {
-            if (!confirm("Remove this listing? Renters won't see it anymore.")) return;
-            start(async () => {
-              const res = await removeListing(listing.id);
-              if (res && !res.ok) toast.error(res.error);
-            });
-          }}
+          onClick={() =>
+            ask({
+              title: "Remove this listing?",
+              description: "Renters won't see it anymore, and open requests are cancelled. This can't be undone.",
+              confirmLabel: "Remove listing",
+              cancelLabel: "Keep it",
+              action: async () => {
+                const res = await removeListing(listing.id);
+                return res && !res.ok ? res.error : null;
+              },
+            })
+          }
         >
           <Trash2 className="size-4" /> Remove
         </Button>

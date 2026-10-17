@@ -80,13 +80,9 @@ export async function rejectPhoto(photoId: string, note: string): Promise<Action
     .set({ scanStatus: "rejected", reviewNote, reviewedBy: admin.id, reviewedAt: new Date() })
     .where(eq(listingPhotos.id, photoId));
   await recomputeListingStatus(env(), d, photo.listingId);
-  const listing = (await d.select().from(listings).where(eq(listings.id, photo.listingId)).limit(1))[0];
-  if (listing && listing.status !== "removed") {
-    waitUntil(notify.photoRejected(env(), d, listing.ownerId, listing, reviewNote));
-  }
   await audit(d, admin.id, "photo.reject", photoId, { listingId: photo.listingId, was: photo.scanStatus, note: reviewNote });
   refresh(true);
-  return { ok: true, message: "Rejected. The owner was asked for a new photo." };
+  return { ok: true, message: "Rejected. The owner sees it under Pending with your note." };
 }
 
 export async function rerunPhotoCheck(photoId: string): Promise<ActionResult> {

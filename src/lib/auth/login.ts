@@ -11,16 +11,13 @@ import { adminEmails, appUrl, requireSecret, type Env } from "@/lib/env";
 import { resolveEmailAccess, type AccessDenied } from "@/lib/schools/service";
 import { normalizeEmail } from "@/lib/schools/domains";
 import { sendSms } from "@/lib/sms";
+import { safeNext } from "@/lib/utils";
 
 const LINK_TTL = 15 * 60 * 1000;
 const SMS_TTL = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 
 export type StartResult = { ok: true; school: School } | { ok: false; reason: AccessDenied | "banned" };
-
-function safeRedirect(path: string | null | undefined) {
-  return path && path.startsWith("/") && !path.startsWith("//") ? path : null;
-}
 
 export async function startEmailLogin(env: Env, db: DB, rawEmail: string, redirectTo?: string | null): Promise<StartResult> {
   const email = normalizeEmail(rawEmail);
@@ -37,7 +34,7 @@ export async function startEmailLogin(env: Env, db: DB, rawEmail: string, redire
     id: await sha256Hex(token),
     email,
     codeHash: await hashCode(secret, `login:${email}`, code),
-    redirectTo: safeRedirect(redirectTo),
+    redirectTo: safeNext(redirectTo),
     expiresAt: new Date(Date.now() + LINK_TTL),
   });
   await sendEmail(

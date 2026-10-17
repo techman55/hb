@@ -16,6 +16,7 @@ import { signIn, signOut } from "@/lib/auth/current";
 import { adminEmails } from "@/lib/env";
 import { allow } from "@/lib/rate-limit";
 import { toE164 } from "@/lib/phone";
+import { safeNext } from "@/lib/utils";
 import { db, env } from "@/lib/server";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -34,8 +35,9 @@ async function clientKey() {
 }
 
 function landing(next: string | null | undefined, onboarded: boolean) {
-  if (!onboarded) return "/welcome";
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  const path = safeNext(next);
+  if (!onboarded) return path ? `/welcome?next=${encodeURIComponent(path)}` : "/welcome";
+  return path ?? "/";
 }
 
 export async function sendLoginLink(email: string, next?: string | null): Promise<Result> {

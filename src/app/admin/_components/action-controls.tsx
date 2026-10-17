@@ -3,6 +3,7 @@
 import { createContext, use, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
 import type { ActionResult } from "@/lib/admin";
 
 type ButtonProps = React.ComponentProps<typeof Button>;
@@ -29,6 +30,7 @@ export function ActionButton({
   ...props
 }: Omit<ButtonProps, "onClick" | "loading"> & { action: () => Promise<ActionResult>; confirm?: string }) {
   const [pending, start] = useTransition();
+  const ask = useConfirm();
   return (
     <Button
       type="button"
@@ -37,9 +39,24 @@ export function ActionButton({
       {...props}
       loading={pending}
       onClick={() => {
-        if (confirm && !window.confirm(confirm)) return;
-        start(async () => {
-          await runAction(action);
+        if (!confirm) {
+          start(async () => {
+            await runAction(action);
+          });
+          return;
+        }
+        // "Ban x? They'll be signed out." → title "Ban x?" with the rest underneath.
+        const split = confirm.indexOf("? ");
+        void ask({
+          title: split > 0 ? confirm.slice(0, split + 1) : confirm,
+          description: split > 0 ? confirm.slice(split + 2) : undefined,
+          confirmLabel: typeof children === "string" ? children : "Confirm",
+          tone: props.variant === "danger" || /^(remove|ban|delete)\b/i.test(confirm) ? "danger" : "default",
+          action: async () => {
+            const res = await action();
+            if (!res.ok) return res.error;
+            toast.success(res.message ?? "Done");
+          },
         });
       }}
     >
