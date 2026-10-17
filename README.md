@@ -19,7 +19,7 @@ Built for Hackbama Track 01 (multi-campus marketplace).
 | Admin panel | `src/app/admin` |
 | Cron: expirations, reminders, scan retries, cleanup | `src/lib/jobs.ts` |
 
-The stack is Next.js 16 (App Router) and Tailwind v4, running on Cloudflare Workers via `@opennextjs/cloudflare`, with D1 + Drizzle, R2, the Images binding, Durable Objects, Resend, Twilio, OpenAI and Sightengine.
+The stack is Next.js 16 (App Router) and Tailwind v4, running on Cloudflare Workers via `@opennextjs/cloudflare`, with D1 + Drizzle, R2, the Images binding, Durable Objects, Cloudflare Email Service, Twilio, OpenAI and Sightengine.
 
 ## Run it locally
 
@@ -30,7 +30,7 @@ npm run db:migrate:local
 npm run dev                            # http://localhost:3000
 ```
 
-Without Resend or Twilio keys, sign-in emails and SMS codes print to the terminal. Use `npm run preview` to run the real Worker locally, which includes the chat WebSockets, the Durable Object and the custom `worker.ts`.
+In local dev, sign-in emails (and SMS codes without Twilio keys) print to the terminal. Use `npm run preview` to run the real Worker locally, which includes the chat WebSockets, the Durable Object and the custom `worker.ts`.
 
 ```bash
 npm test          # unit tests (domain rules, handoff codes, AI-metadata detection, dates, search)

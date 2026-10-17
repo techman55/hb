@@ -3,26 +3,25 @@ import { isDev } from "@/lib/env";
 
 export type Email = { to: string; subject: string; html: string; text: string; replyTo?: string };
 
-/** Sends through Resend. Without a key in local dev, the email is printed to the console instead. */
+/** Sends through Cloudflare Email Service (`EMAIL` binding). In local dev, the email is printed to the console instead. */
 export async function sendEmail(env: Env, email: Email): Promise<void> {
-  if (!env.RESEND_API_KEY) {
-    if (isDev(env)) {
-      console.log(`\n📧  Email to ${email.to}\n    ${email.subject}\n\n${email.text}\n`);
-      return;
-    }
-    throw new Error("Missing secret RESEND_API_KEY. See docs/ENVIRONMENT.md.");
+  if (isDev(env)) {
+    console.log(`\n📧  Email to ${email.to}\n    ${email.subject}\n\n${email.text}\n`);
+    return;
   }
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
-    body: JSON.stringify({
-      from: env.EMAIL_FROM || "Dibs <login@dibs.school>",
-      to: [email.to],
-      subject: email.subject,
-      html: email.html,
-      text: email.text,
-      reply_to: email.replyTo,
-    }),
+  if (!env.EMAIL) throw new Error("Missing EMAIL send_email binding. See docs/ENVIRONMENT.md.");
+  await env.EMAIL.send({
+    from: parseAddress(env.EMAIL_FROM || "Dibs <login@dibs.school>"),
+    to: email.to,
+    subject: email.subject,
+    html: email.html,
+    text: email.text,
+    replyTo: email.replyTo,
   });
-  if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
+}
+
+/** "Dibs <login@dibs.school>" → { name, email }; a bare address is passed through. */
+function parseAddress(value: string): string | EmailAddress {
+  const match = value.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+  return match ? { name: match[1].replace(/^"|"$/g, ""), email: match[2] } : value.trim();
 }
