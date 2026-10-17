@@ -52,11 +52,13 @@ export function payLinks(other: { venmo: string | null; cashapp: string | null }
   const amount = (totalCents / 100).toFixed(2);
   const links: { label: string; href: string }[] = [];
   if (other.venmo) {
-    // Venmo shows the note as-is, so keep it readable: form-encoded once (spaces as "+") and no
-    // punctuation that only survives as %XX escapes.
+    // Venmo's app shows "+" literally, so spaces must be %20 (encodeURIComponent, not URLSearchParams).
+    // Punctuation is dropped so nothing else depends on how Venmo decodes escapes.
     const note = `${title.replace(/[^\p{L}\p{N} -]+/gu, " ").replace(/\s+/g, " ").trim()} rental via Dibs`;
-    const query = new URLSearchParams({ txn: "pay", audience: "private", amount, note });
-    links.push({ label: "Pay with Venmo", href: `https://venmo.com/${encodeURIComponent(other.venmo)}?${query}` });
+    links.push({
+      label: "Pay with Venmo",
+      href: `https://venmo.com/${encodeURIComponent(other.venmo)}?txn=pay&audience=private&amount=${amount}&note=${encodeURIComponent(note)}`,
+    });
   }
   if (other.cashapp) links.push({ label: "Pay with Cash App", href: `https://cash.app/$${encodeURIComponent(other.cashapp)}/${amount}` });
   return links;
