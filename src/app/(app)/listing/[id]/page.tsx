@@ -40,7 +40,8 @@ export default async function ListingPage({ params }: PageProps<"/listing/[id]">
   }
 
   return (
-    <div className="lg:pt-2">
+    // pb-24 keeps the last section clear of the fixed action bar on mobile (it floats out of flow there).
+    <div className="pb-24 lg:pb-0 lg:pt-2">
       <Link href="/" className="-ml-2 mb-3 inline-flex items-center gap-1 rounded-full px-2 py-1 text-sm text-muted hover:bg-surface-2 lg:hidden">
         <ChevronLeft className="size-4" /> Back
       </Link>
