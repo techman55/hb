@@ -92,6 +92,7 @@ export async function requestDibs(
     `${firstName(renter.name, "Someone")} called dibs: ${input.days} ${input.days === 1 ? "day" : "days"} from ${when}, ${formatMoney(rental.totalCents!)} total.`,
   );
   if (rental.note) await addMessage(env, db, rental.id!, renter.id, rental.note);
+  await notify.dibsRequested(env, db, rental.id!);
   return { ok: true, rentalId: rental.id! };
 }
 
@@ -165,11 +166,11 @@ export async function confirmHandoff(env: Env, db: DB, owner: User, rentalId: st
     await db.update(rentals).set({ status: "active", pickedUpAt: new Date() }).where(eq(rentals.id, rentalId));
     const due = formatDay(addDays(rental.startDate, rental.days));
     await systemMessage(env, db, rentalId, `Picked up. Verified in person with ${renterName}. Due back ${due}.`);
-    await notify.receipt(env, db, rentalId, "pickup");
+    await Promise.all([notify.receipt(env, db, rentalId, "pickup"), notify.handoffDone(env, db, rentalId, "pickup")]);
   } else {
     await db.update(rentals).set({ status: "returned", returnedAt: new Date(), closedAt: new Date() }).where(eq(rentals.id, rentalId));
     await systemMessage(env, db, rentalId, `Returned. Verified in person with ${renterName}. All done.`);
-    await notify.receipt(env, db, rentalId, "return");
+    await Promise.all([notify.receipt(env, db, rentalId, "return"), notify.handoffDone(env, db, rentalId, "return")]);
   }
   return { ok: true, action };
 }

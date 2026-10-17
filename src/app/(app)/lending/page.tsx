@@ -60,7 +60,7 @@ export default async function LendingPage() {
       {requests.length > 0 && (
         <section>
           <SectionTitle count={requests.length}>Requests</SectionTitle>
-          <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 lg:-mx-6 lg:px-6">
+          <div className="scroll-strip -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 lg:-mx-6 lg:px-6">
             {requests.map((r) => (
               <RequestCard key={r.id} rental={r} />
             ))}

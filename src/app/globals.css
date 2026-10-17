@@ -87,6 +87,35 @@ body {
   display: none;
 }
 
+/* Horizontal card strips: swipe on touch screens, a visible thin scrollbar with a mouse or trackpad. */
+.scroll-strip {
+  scrollbar-width: none;
+}
+.scroll-strip::-webkit-scrollbar {
+  display: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .scroll-strip {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+    padding-bottom: 0.75rem;
+  }
+  .scroll-strip:hover {
+    scrollbar-color: var(--muted) transparent;
+  }
+  .scroll-strip::-webkit-scrollbar {
+    display: block;
+    height: 8px;
+  }
+  .scroll-strip::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: var(--line);
+  }
+  .scroll-strip:hover::-webkit-scrollbar-thumb {
+    background: var(--muted);
+  }
+}
+
 .skeleton {
   background: linear-gradient(90deg, var(--surface-2) 25%, var(--line) 50%, var(--surface-2) 75%);
   background-size: 200% 100%;

@@ -8,6 +8,7 @@ import { checkPhoneCode, sendPhoneCode } from "@/lib/auth/login";
 import { requireUser } from "@/lib/auth/current";
 import { isCategory } from "@/lib/categories";
 import { addFriend, removeFriend, respondToFriend } from "@/lib/friends";
+import { pushToUsers } from "@/lib/live";
 import { toE164 } from "@/lib/phone";
 import { allow } from "@/lib/rate-limit";
 import { db, env } from "@/lib/server";
@@ -71,7 +72,15 @@ export async function confirmPhone(rawPhone: string, code: string): Promise<Resu
 
 export async function removePhone(): Promise<Result> {
   const user = await requireUser();
-  await db().update(users).set({ phone: null, phoneVerifiedAt: null }).where(eq(users.id, user.id));
+  await db().update(users).set({ phone: null, phoneVerifiedAt: null, smsAlerts: false }).where(eq(users.id, user.id));
+  revalidatePath("/me");
+  return { ok: true };
+}
+
+export async function setSmsAlerts(on: boolean): Promise<Result> {
+  const user = await requireUser();
+  if (on && !(user.phone && user.phoneVerifiedAt)) return { ok: false, error: "Verify a phone number first." };
+  await db().update(users).set({ smsAlerts: on }).where(eq(users.id, user.id));
   revalidatePath("/me");
   return { ok: true };
 }
@@ -111,6 +120,7 @@ export async function friendAction(otherId: string, action: "add" | "accept" | "
   else if (action === "accept") await respondToFriend(db(), user.id, otherId, true);
   else if (action === "decline") await respondToFriend(db(), user.id, otherId, false);
   else await removeFriend(db(), user.id, otherId);
+  await pushToUsers(env(), [otherId, user.id], { type: "friends" });
   revalidatePath("/", "layout");
   return { ok: true };
 }

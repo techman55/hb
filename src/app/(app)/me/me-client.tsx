@@ -12,7 +12,7 @@ import { useConfirm } from "@/components/ui/confirm";
 import { Input, Label } from "@/components/ui/field";
 import { CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
-import { confirmPhone, friendAction, removePhone, saveProfile, startPhoneVerification, toggleFollow } from "@/app/actions/profile";
+import { confirmPhone, friendAction, removePhone, saveProfile, setSmsAlerts, startPhoneVerification, toggleFollow } from "@/app/actions/profile";
 
 export function ProfileForm({ name, venmo, cashapp }: { name: string; venmo: string; cashapp: string }) {
   const [v, setV] = useState({ name, venmo, cashapp });
@@ -107,6 +107,61 @@ export function PhoneSettings({ phone }: { phone: string | null }) {
         Verify
       </Button>
     </form>
+  );
+}
+
+const ALERTS = ["Someone calls dibs on your stuff", "A pickup or return is confirmed", "A new chat message while you're away"];
+
+/** Off by default; texts need a verified phone, so the switch stays locked until there is one. */
+export function TextAlerts({ enabled, hasPhone }: { enabled: boolean; hasPhone: boolean }) {
+  const [on, setOn] = useState(enabled);
+  const [pending, start] = useTransition();
+  const toggle = () => {
+    const next = !on;
+    setOn(next);
+    start(async () => {
+      const res = await setSmsAlerts(next);
+      if (!res.ok) {
+        setOn(!next);
+        toast.error(res.error);
+      } else toast.success(next ? "Text alerts on" : "Text alerts off");
+    });
+  };
+  return (
+    <div>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p id="sms-alerts-label" className="font-semibold">
+            Text me about important stuff
+          </p>
+          <p className="text-sm text-muted">
+            {hasPhone ? "Each text links straight to what needs your attention." : "Verify a phone number above to turn these on."}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-labelledby="sms-alerts-label"
+          disabled={!hasPhone || pending}
+          onClick={toggle}
+          className={cn(
+            "relative mt-0.5 h-7 w-12 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+            on ? "bg-accent" : "bg-muted/40",
+          )}
+        >
+          <span className={cn("absolute top-0.5 left-0.5 size-6 rounded-full bg-white shadow transition-transform", on && "translate-x-5")} />
+        </button>
+      </div>
+      <ul className="mt-3 flex flex-col gap-1 text-sm text-muted">
+        {ALERTS.map((a) => (
+          <li key={a} className="flex items-center gap-2">
+            <Check className="size-3.5 shrink-0" /> {a}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-xs text-muted">Msg &amp; data rates may apply. Reply STOP to any text to stop them.</p>
+    </div>
   );
 }
 

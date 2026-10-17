@@ -1,8 +1,10 @@
+import { after } from "next/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { rentals } from "@/db/schema";
 import { fail, json, withUser } from "@/lib/api";
 import { addMessage, chatOpen, listMessages, markRead, MAX_MESSAGE } from "@/lib/chat/service";
+import { notify } from "@/lib/notify";
 import { allow } from "@/lib/rate-limit";
 import { db, env } from "@/lib/server";
 import { getSettings } from "@/lib/settings";
@@ -36,6 +38,8 @@ export const POST = withUser<Ctx>(async (req, user, { params }) => {
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success) return fail(`Messages can be up to ${MAX_MESSAGE} characters.`);
   if (!(await allow(env(), "AUTH_LIMITER", `chat:${user.id}`))) return fail("You're sending messages too fast.", 429);
-  const message = await addMessage(env(), db(), rentalId, user.id, parsed.data.body);
+  const [e, d] = [env(), db()];
+  const { online, ...message } = await addMessage(e, d, rentalId, user.id, parsed.data.body);
+  after(() => notify.chatMessage(e, d, rentalId, user.id, message.body, online));
   return json({ message });
 });

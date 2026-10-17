@@ -44,7 +44,7 @@ export function RightRail({ upcoming, friendRequests }: { upcoming: Handoff[]; f
         )}
       </section>
       {friendRequests > 0 && (
-        <Link href="/me#friends" className="flex items-center gap-3 rounded-2xl bg-accent-soft px-4 py-3 text-sm font-semibold text-accent">
+        <Link href="/inbox" className="flex items-center gap-3 rounded-2xl bg-accent-soft px-4 py-3 text-sm font-semibold text-accent">
           <UserPlus className="size-4" />
           {friendRequests === 1 ? "1 friend request" : `${friendRequests} friend requests`}
         </Link>

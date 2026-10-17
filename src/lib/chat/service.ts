@@ -3,9 +3,10 @@
 
 import { and, asc, eq, gt, sql } from "drizzle-orm";
 import type { DB } from "@/db";
-import { chatReads, messages, type Message, type Rental } from "@/db/schema";
+import { chatReads, messages, rentals, type Message, type Rental } from "@/db/schema";
 import { newId } from "@/lib/crypto";
 import type { Env } from "@/lib/env";
+import { pushToUsers } from "@/lib/live";
 
 export const MAX_MESSAGE = 500;
 const OPEN = new Set(["requested", "accepted", "active"]);
@@ -42,13 +43,16 @@ export async function addMessage(
   senderId: string | null,
   body: string,
   kind: "text" | "system" = "text",
-): Promise<ChatMessage> {
+): Promise<ChatMessage & { online: Set<string> }> {
   const row = { id: newId("msg"), rentalId, senderId, kind, body: body.slice(0, MAX_MESSAGE), createdAt: new Date() };
   await db.insert(messages).values(row);
   if (senderId) await markRead(db, rentalId, senderId);
   const msg = toChat(row as Message);
   await broadcast(env, rentalId, msg);
-  return msg;
+  // Inbox lists and badges for both people (also covers every rental status change, since each posts a system message).
+  const parties = (await db.select({ a: rentals.ownerId, b: rentals.renterId }).from(rentals).where(eq(rentals.id, rentalId)).limit(1))[0];
+  const online = parties ? await pushToUsers(env, [parties.a, parties.b], { type: "inbox" }) : new Set<string>();
+  return Object.assign(msg, { online });
 }
 
 export const systemMessage = (env: Env, db: DB, rentalId: string, body: string) =>

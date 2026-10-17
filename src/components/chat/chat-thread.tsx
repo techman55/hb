@@ -34,6 +34,7 @@ export function ChatThread({
   const [typing, setTyping] = useState(false);
   const [showSpots, setShowSpots] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const lastAt = useRef(initial.at(-1)?.createdAt ?? 0);
   const typingTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -127,6 +128,18 @@ export function ChatThread({
     }
   };
 
+  // Suggestions only fill the box; the user still decides to send.
+  const suggest = (text: string) => {
+    setDraft(text.slice(0, MAX));
+    setShowSpots(false);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    });
+  };
+
   const onType = (v: string) => {
     setDraft(v.slice(0, MAX));
     const now = Date.now();
@@ -182,7 +195,7 @@ export function ChatThread({
                   </button>
                 )}
                 {QUICK.map((q) => (
-                  <button key={q} onClick={() => void send(q)} className="h-8 shrink-0 rounded-full bg-surface px-3 text-[13px] font-medium ring-1 ring-line">
+                  <button key={q} onClick={() => suggest(q)} className="h-8 shrink-0 rounded-full bg-surface px-3 text-[13px] font-medium ring-1 ring-line">
                     {q}
                   </button>
                 ))}
@@ -192,7 +205,7 @@ export function ChatThread({
                   {spots.map((s) => (
                     <button
                       key={s.name}
-                      onClick={() => void send(`Can we meet at ${s.name}${s.note ? ` (${s.note.toLowerCase()})` : ""}?`)}
+                      onClick={() => suggest(`Can we meet at ${s.name}${s.note ? ` (${s.note.toLowerCase()})` : ""}?`)}
                       className="rounded-2xl bg-accent-soft px-3 py-2 text-left text-sm font-medium text-accent"
                     >
                       {s.name}
@@ -209,6 +222,7 @@ export function ChatThread({
                 className="flex items-end gap-2"
               >
                 <textarea
+                  ref={inputRef}
                   value={draft}
                   onChange={(e) => onType(e.target.value)}
                   onKeyDown={(e) => {

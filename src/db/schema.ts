@@ -115,6 +115,8 @@ export const users = sqliteTable(
     phoneVerifiedAt: ts("phone_verified_at"),
     venmo: text("venmo"),
     cashapp: text("cashapp"),
+    /** Opt-in only: texts for dibs requests, handoffs and new chat messages. Needs a verified phone. */
+    smsAlerts: integer("sms_alerts", { mode: "boolean" }).notNull().default(false),
     role: text("role", { enum: ["user", "admin"] }).notNull().default("user"),
     status: text("status", { enum: ["active", "banned"] }).notNull().default("active"),
     friendCode: text("friend_code").notNull().unique(),

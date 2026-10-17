@@ -12,7 +12,7 @@ import { friendIds, incomingRequests } from "@/lib/friends";
 import { formatPhone } from "@/lib/phone";
 import { db, env } from "@/lib/server";
 import { logout } from "@/app/(auth)/actions";
-import { FollowChips, FriendButtons, FriendCode, PhoneSettings, ProfileForm } from "./me-client";
+import { FollowChips, FriendButtons, FriendCode, PhoneSettings, ProfileForm, TextAlerts } from "./me-client";
 
 export const metadata: Metadata = { title: "Me" };
 
@@ -83,8 +83,13 @@ export default async function MePage() {
       </Panel>
 
       <Panel>
-        <SectionTitle>Phone sign-in</SectionTitle>
+        <SectionTitle>Phone</SectionTitle>
         <PhoneSettings phone={user.phoneVerifiedAt ? formatPhone(user.phone) : null} />
+      </Panel>
+
+      <Panel id="alerts">
+        <SectionTitle>Text alerts</SectionTitle>
+        <TextAlerts enabled={user.smsAlerts} hasPhone={!!(user.phone && user.phoneVerifiedAt)} />
       </Panel>
 
       <Panel>

@@ -1,4 +1,5 @@
 import { BottomNav, SideNav, TopBar } from "@/components/shell/nav";
+import { LiveUpdates } from "@/components/shell/live-updates";
 import { RightRail } from "@/components/shell/right-rail";
 import { getUserSchool, requireUser } from "@/lib/auth/current";
 import { db } from "@/lib/server";
@@ -12,13 +13,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="min-h-dvh">
-      <SideNav user={navUser} school={schoolLike} badges={{ dibs: shell.dibs, lending: shell.lending, inbox: shell.unread }} />
+      <SideNav user={navUser} school={schoolLike} badges={{ dibs: shell.dibs, lending: shell.lending, inbox: shell.unread + shell.friendRequests }} />
       <div className="lg:pl-64 xl:pr-80">
-        <TopBar school={schoolLike} unread={shell.unread} />
+        <TopBar school={schoolLike} unread={shell.unread + shell.friendRequests} />
         <main className="mx-auto w-full max-w-[680px] px-4 pb-32 pt-4 lg:px-6 lg:pb-16 lg:pt-8">{children}</main>
       </div>
       <RightRail upcoming={shell.upcoming} friendRequests={shell.friendRequests} />
       <BottomNav user={navUser} badges={{ dibs: shell.dibs, lending: shell.lending }} />
+      <LiveUpdates />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { rentals } from "@/db/schema";
 import { readCookie, sessionCookieName, validateSessionToken } from "@/lib/auth/session";
+import { userRoomName } from "@/lib/live";
 
 /** `/ws/chat/:rentalId` — authenticates the session cookie, then hands the socket to the room. */
 export async function handleChatSocket(request: Request, env: CloudflareEnv): Promise<Response> {
@@ -21,6 +22,19 @@ export async function handleChatSocket(request: Request, env: CloudflareEnv): Pr
   }
 
   const stub = env.CHAT_ROOM.get(env.CHAT_ROOM.idFromName(rentalId));
+  const headers = new Headers(request.headers);
+  headers.set("x-dibs-user", user.id);
+  return stub.fetch(new Request(request.url, { headers }));
+}
+
+/** `/ws/me` — the signed-in user's own channel, used to refresh the inbox and badges live. */
+export async function handleUserSocket(request: Request, env: CloudflareEnv): Promise<Response> {
+  if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") {
+    return new Response("Expected a WebSocket", { status: 426 });
+  }
+  const user = await validateSessionToken(getDb(env), readCookie(request.headers.get("cookie"), sessionCookieName(env)));
+  if (!user) return new Response("Unauthorized", { status: 401 });
+  const stub = env.CHAT_ROOM.get(env.CHAT_ROOM.idFromName(userRoomName(user.id)));
   const headers = new Headers(request.headers);
   headers.set("x-dibs-user", user.id);
   return stub.fetch(new Request(request.url, { headers }));
