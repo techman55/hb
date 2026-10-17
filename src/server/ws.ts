@@ -2,13 +2,24 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { rentals } from "@/db/schema";
 import { readCookie, sessionCookieName, validateSessionToken } from "@/lib/auth/session";
+import { appUrl } from "@/lib/env";
 import { userRoomName } from "@/lib/live";
+
+/**
+ * Browsers send cookies on cross-site WebSocket handshakes in some cases, and the handshake
+ * isn't covered by CORS, so only accept sockets opened by our own pages.
+ */
+function badOrigin(request: Request, env: CloudflareEnv): boolean {
+  const origin = request.headers.get("origin");
+  return !!origin && origin !== new URL(appUrl(env)).origin;
+}
 
 /** `/ws/chat/:rentalId` — authenticates the session cookie, then hands the socket to the room. */
 export async function handleChatSocket(request: Request, env: CloudflareEnv): Promise<Response> {
   if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") {
     return new Response("Expected a WebSocket", { status: 426 });
   }
+  if (badOrigin(request, env)) return new Response("Forbidden", { status: 403 });
   const rentalId = new URL(request.url).pathname.split("/")[3];
   if (!rentalId) return new Response("Not found", { status: 404 });
 
@@ -32,6 +43,7 @@ export async function handleUserSocket(request: Request, env: CloudflareEnv): Pr
   if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") {
     return new Response("Expected a WebSocket", { status: 426 });
   }
+  if (badOrigin(request, env)) return new Response("Forbidden", { status: 403 });
   const user = await validateSessionToken(getDb(env), readCookie(request.headers.get("cookie"), sessionCookieName(env)));
   if (!user) return new Response("Unauthorized", { status: 401 });
   const stub = env.CHAT_ROOM.get(env.CHAT_ROOM.idFromName(userRoomName(user.id)));

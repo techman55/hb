@@ -11,7 +11,7 @@ import { pushToUsers } from "@/lib/live";
 export const MAX_MESSAGE = 500;
 const OPEN = new Set(["requested", "accepted", "active"]);
 
-export function chatOpen(rental: Rental, retentionDays: number, now = Date.now()): boolean {
+export function chatOpen(rental: Pick<Rental, "status" | "closedAt" | "returnedAt">, retentionDays: number, now = Date.now()): boolean {
   if (OPEN.has(rental.status)) return true;
   const ended = rental.closedAt ?? rental.returnedAt;
   return !!ended && now - ended.getTime() < retentionDays * 86_400_000;

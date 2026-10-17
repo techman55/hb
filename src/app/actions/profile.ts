@@ -45,7 +45,9 @@ export async function startPhoneVerification(rawPhone: string): Promise<Result> 
     .where(and(eq(users.phone, phone), ne(users.id, user.id)))
     .limit(1);
   if (taken.length) return { ok: false, error: "That number is already on another account." };
-  if (!(await allow(env(), "AUTH_LIMITER", `verify:${user.id}`))) return { ok: false, error: "Too many tries. Wait a minute." };
+  if (!(await allow(env(), "AUTH_LIMITER", `verify:${user.id}`)) || !(await allow(env(), "AUTH_LIMITER", `phone:${phone}`))) {
+    return { ok: false, error: "Too many tries. Wait a minute." };
+  }
   try {
     await sendPhoneCode(env(), db(), phone, "verify", user.id);
     return { ok: true };
@@ -59,6 +61,7 @@ export async function confirmPhone(rawPhone: string, code: string): Promise<Resu
   const user = await requireUser({ allowUnonboarded: true });
   const phone = toE164(rawPhone);
   if (!phone) return { ok: false, error: "Enter a valid US phone number." };
+  if (!(await allow(env(), "AUTH_LIMITER", `phonecode:${phone}`))) return { ok: false, error: "Too many tries. Wait a minute." };
   const checked = await checkPhoneCode(env(), db(), phone, "verify", code);
   if (!checked || checked.userId !== user.id) return { ok: false, error: "That code didn't work." };
   try {

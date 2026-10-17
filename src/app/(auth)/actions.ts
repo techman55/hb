@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth/login";
 import { signIn, signOut } from "@/lib/auth/current";
 import { adminEmails } from "@/lib/env";
+import { normalizeEmail } from "@/lib/schools/domains";
 import { allow } from "@/lib/rate-limit";
 import { toE164 } from "@/lib/phone";
 import { safeNext } from "@/lib/utils";
@@ -43,7 +44,7 @@ function landing(next: string | null | undefined, onboarded: boolean) {
 export async function sendLoginLink(email: string, next?: string | null): Promise<Result> {
   const e = env();
   const ip = await clientKey();
-  if (!(await allow(e, "AUTH_LIMITER", `ip:${ip}`)) || !(await allow(e, "AUTH_LIMITER", `email:${email.toLowerCase()}`))) {
+  if (!(await allow(e, "AUTH_LIMITER", `ip:${ip}`)) || !(await allow(e, "AUTH_LIMITER", `email:${normalizeEmail(email)}`))) {
     return { ok: false, error: "Too many tries. Wait a minute and try again." };
   }
   try {
@@ -57,7 +58,7 @@ export async function sendLoginLink(email: string, next?: string | null): Promis
 
 export async function verifyEmailCode(email: string, code: string, next?: string | null): Promise<Result> {
   const e = env();
-  if (!(await allow(e, "AUTH_LIMITER", `code:${email.toLowerCase()}`))) {
+  if (!(await allow(e, "AUTH_LIMITER", `code:${normalizeEmail(email)}`))) {
     return { ok: false, error: "Too many tries. Wait a minute and try again." };
   }
   const consumed = await consumeEmailCode(e, db(), email, code);

@@ -31,8 +31,12 @@ export async function getRentalDetail(db: DB, rentalId: string, me: string) {
     .where(eq(meetupSpots.schoolId, l?.schoolId ?? ""))
     .orderBy(asc(meetupSpots.position));
 
+  // Never hand the HOTP secret to page code: if it reached a client component, the owner could
+  // mint the renter's handoff code and fake a pickup or return.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { handoffSecret, ...safeRental } = rental;
   return {
-    rental,
+    rental: safeRental,
     role,
     dueDate: addDays(rental.startDate, rental.days),
     listing: { id: l?.id ?? rental.listingId, title: l?.title ?? "Item", coverUrl: mediaUrl(cover[0]?.key ?? cover[0]?.display) },
