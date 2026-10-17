@@ -9,6 +9,7 @@ import { newId, randomToken } from "@/lib/crypto";
 import { addDays, formatDay, isISODate, rangesOverlap, todayISO } from "@/lib/dates";
 import { requireSecret, type Env } from "@/lib/env";
 import { canView } from "@/lib/listings/queries";
+import { payHandles } from "@/lib/rentals/detail";
 import { notify } from "@/lib/notify";
 import { firstName, formatMoney } from "@/lib/utils";
 import { verifyHandoff, type HandoffAction } from "./handoff";
@@ -30,13 +31,7 @@ async function overlaps(db: DB, listingId: string, startDate: string, days: numb
   const booked = await db
     .select()
     .from(rentals)
-    .where(
-      and(
-        eq(rentals.listingId, listingId),
-        inArray(rentals.status, [...BOOKED]),
-        excludeId ? ne(rentals.id, excludeId) : undefined,
-      ),
-    );
+    .where(and(eq(rentals.listingId, listingId), inArray(rentals.status, [...BOOKED]), excludeId ? ne(rentals.id, excludeId) : undefined));
   return booked.some((r) => rangesOverlap(r.startDate, r.days, startDate, days));
 }
 
@@ -90,6 +85,7 @@ export async function requestDibs(
     db,
     rental.id!,
     `${firstName(renter.name, "Someone")} called dibs: ${input.days} ${input.days === 1 ? "day" : "days"} from ${when}, ${formatMoney(rental.totalCents!)} total.`,
+    renter.id,
   );
   if (rental.note) await addMessage(env, db, rental.id!, renter.id, rental.note);
   await notify.dibsRequested(env, db, rental.id!);
@@ -103,8 +99,11 @@ export async function respondToDibs(env: Env, db: DB, owner: User, rentalId: str
   const when = formatDay(rental.startDate);
 
   if (!accept) {
-    await db.update(rentals).set({ status: "declined", respondedAt: new Date(), closedAt: new Date(), closedBy: owner.id }).where(eq(rentals.id, rentalId));
-    await systemMessage(env, db, rentalId, `${firstName(owner.name, "The owner")} declined this request.`);
+    await db
+      .update(rentals)
+      .set({ status: "declined", respondedAt: new Date(), closedAt: new Date(), closedBy: owner.id })
+      .where(eq(rentals.id, rentalId));
+    await systemMessage(env, db, rentalId, `${firstName(owner.name, "The owner")} declined this request.`, owner.id);
     return { ok: true };
   }
 
@@ -112,7 +111,15 @@ export async function respondToDibs(env: Env, db: DB, owner: User, rentalId: str
     return { ok: false, error: "Those dates overlap a rental you already accepted." };
   }
   await db.update(rentals).set({ status: "accepted", respondedAt: new Date() }).where(eq(rentals.id, rentalId));
-  await systemMessage(env, db, rentalId, `${firstName(owner.name, "The owner")} accepted. Pickup is ${when}. Agree on a spot below.`);
+  const ownerName = firstName(owner.name, "The owner");
+  const handles = payHandles(owner);
+  await systemMessage(
+    env,
+    db,
+    rentalId,
+    `${ownerName} accepted. Pickup is ${when}. Pay ${formatMoney(rental.totalCents)} before ${ownerName} scans the pickup code.${handles ? ` ${ownerName} takes ${handles}.` : ""} Agree on a spot below.`,
+    owner.id,
+  );
 
   // Other pending requests for overlapping dates can't happen now.
   const competing = await db
@@ -120,8 +127,11 @@ export async function respondToDibs(env: Env, db: DB, owner: User, rentalId: str
     .from(rentals)
     .where(and(eq(rentals.listingId, rental.listingId), eq(rentals.status, "requested"), ne(rentals.id, rentalId)));
   for (const other of competing.filter((r) => rangesOverlap(r.startDate, r.days, rental.startDate, rental.days))) {
-    await db.update(rentals).set({ status: "declined", respondedAt: new Date(), closedAt: new Date(), closedReason: "overlap" }).where(eq(rentals.id, other.id));
-    await systemMessage(env, db, other.id, "Those dates were booked by someone else, so this request was closed.");
+    await db
+      .update(rentals)
+      .set({ status: "declined", respondedAt: new Date(), closedAt: new Date(), closedReason: "overlap" })
+      .where(eq(rentals.id, other.id));
+    await systemMessage(env, db, other.id, "Those dates were booked by someone else, so this request was closed.", owner.id);
   }
   return { ok: true };
 }
@@ -133,7 +143,7 @@ export async function cancelRental(env: Env, db: DB, user: User, rentalId: strin
     return { ok: false, error: rental.status === "active" ? "It's already picked up. Return it to finish." : "This rental is closed." };
   }
   await db.update(rentals).set({ status: "cancelled", closedAt: new Date(), closedBy: user.id }).where(eq(rentals.id, rentalId));
-  await systemMessage(env, db, rentalId, `${firstName(user.name, "Someone")} cancelled.`);
+  await systemMessage(env, db, rentalId, `${firstName(user.name, "Someone")} cancelled.`, user.id);
   return { ok: true };
 }
 
@@ -144,11 +154,22 @@ export function expectedHandoff(rental: Rental): HandoffAction | null {
 }
 
 /** The owner scans (or types) the renter's code. Moves accepted → active, or active → returned. */
-export async function confirmHandoff(env: Env, db: DB, owner: User, rentalId: string, input: string): Promise<Result<{ action: HandoffAction }>> {
+export async function confirmHandoff(
+  env: Env,
+  db: DB,
+  owner: User,
+  rentalId: string,
+  input: string,
+  expected?: HandoffAction,
+): Promise<Result<{ action: HandoffAction }>> {
   const rental = await getRental(db, rentalId);
   if (!rental || rental.ownerId !== owner.id) return { ok: false, error: "Rental not found." };
   const action = expectedHandoff(rental);
   if (!action) return { ok: false, error: "There's nothing to hand off for this rental." };
+  // The scanner says which step it opened for. If the rental already moved on, don't advance it again.
+  if (expected && expected !== action) {
+    return { ok: false, error: expected === "pickup" ? "Pickup was already confirmed. Refresh the page." : "This rental isn't out yet." };
+  }
   if (action === "pickup" && rental.startDate > addDays(todayISO(), 1)) {
     return { ok: false, error: `Pickup is set for ${formatDay(rental.startDate)}.` };
   }
@@ -165,11 +186,11 @@ export async function confirmHandoff(env: Env, db: DB, owner: User, rentalId: st
   if (action === "pickup") {
     await db.update(rentals).set({ status: "active", pickedUpAt: new Date() }).where(eq(rentals.id, rentalId));
     const due = formatDay(addDays(rental.startDate, rental.days));
-    await systemMessage(env, db, rentalId, `Picked up. Verified in person with ${renterName}. Due back ${due}.`);
+    await systemMessage(env, db, rentalId, `Picked up. Verified in person with ${renterName}. Due back ${due}.`, owner.id);
     await Promise.all([notify.receipt(env, db, rentalId, "pickup"), notify.handoffDone(env, db, rentalId, "pickup")]);
   } else {
     await db.update(rentals).set({ status: "returned", returnedAt: new Date(), closedAt: new Date() }).where(eq(rentals.id, rentalId));
-    await systemMessage(env, db, rentalId, `Returned. Verified in person with ${renterName}. All done.`);
+    await systemMessage(env, db, rentalId, `Returned. Verified in person with ${renterName}. All done.`, owner.id);
     await Promise.all([notify.receipt(env, db, rentalId, "return"), notify.handoffDone(env, db, rentalId, "return")]);
   }
   return { ok: true, action };
@@ -179,12 +200,18 @@ export async function confirmHandoff(env: Env, db: DB, owner: User, rentalId: st
 export async function expireRentals(env: Env, db: DB, now = new Date()) {
   const cutoff = new Date(now.getTime() - 48 * 3_600_000);
   const today = todayISO(undefined, now);
-  const stale = await db.select().from(rentals).where(inArray(rentals.status, ["requested", "accepted"]));
+  const stale = await db
+    .select()
+    .from(rentals)
+    .where(inArray(rentals.status, ["requested", "accepted"]));
   for (const r of stale) {
     const unanswered = r.status === "requested" && (r.createdAt < cutoff || r.startDate < today);
     const noShow = r.status === "accepted" && addDays(r.startDate, 2) < today;
     if (!unanswered && !noShow) continue;
-    await db.update(rentals).set({ status: "expired", closedAt: now, closedReason: unanswered ? "unanswered" : "no_pickup" }).where(eq(rentals.id, r.id));
+    await db
+      .update(rentals)
+      .set({ status: "expired", closedAt: now, closedReason: unanswered ? "unanswered" : "no_pickup" })
+      .where(eq(rentals.id, r.id));
     await systemMessage(env, db, r.id, unanswered ? "This request expired without an answer." : "Pickup didn't happen, so this rental was closed.");
   }
 }
@@ -194,11 +221,12 @@ export async function expireRentals(env: Env, db: DB, now = new Date()) {
  * Items already picked up stay active so they still get returned and verified.
  */
 export async function closeOpenRentals(env: Env, db: DB, scope: { listingId?: string; userId?: string }, reason: string) {
-  const open = await db.select().from(rentals).where(inArray(rentals.status, ["requested", "accepted"]));
+  const open = await db
+    .select()
+    .from(rentals)
+    .where(inArray(rentals.status, ["requested", "accepted"]));
   const hit = open.filter(
-    (r) =>
-      (scope.listingId && r.listingId === scope.listingId) ||
-      (scope.userId && (r.ownerId === scope.userId || r.renterId === scope.userId)),
+    (r) => (scope.listingId && r.listingId === scope.listingId) || (scope.userId && (r.ownerId === scope.userId || r.renterId === scope.userId)),
   );
   for (const r of hit) {
     await db.update(rentals).set({ status: "cancelled", closedAt: new Date(), closedReason: reason }).where(eq(rentals.id, r.id));
@@ -206,7 +234,9 @@ export async function closeOpenRentals(env: Env, db: DB, scope: { listingId?: st
       env,
       db,
       r.id,
-      reason === "listing_removed" ? "This rental was cancelled because the listing is no longer available." : "This rental was closed by a moderator.",
+      reason === "listing_removed"
+        ? "This rental was cancelled because the listing is no longer available."
+        : "This rental was closed by a moderator.",
     );
   }
   return hit.length;

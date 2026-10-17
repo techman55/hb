@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowUp, MapPin } from "lucide-react";
+import { ArrowUp, MapPin, Wallet } from "lucide-react";
 import type { ChatMessage } from "@/lib/chat/service";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +20,7 @@ export function ChatThread({
   otherName,
   open,
   spots,
+  payNote,
 }: {
   rentalId: string;
   me: string;
@@ -27,6 +28,8 @@ export function ChatThread({
   otherName: string;
   open: boolean;
   spots: { name: string; note: string | null }[];
+  /** Owner only, before pickup: a ready-made message telling the renter how to pay. */
+  payNote?: string | null;
 }) {
   const [messages, setMessages] = useState(initial);
   const [draft, setDraft] = useState("");
@@ -73,6 +76,8 @@ export function ChatThread({
           if (data.type === "message" && data.message) {
             merge([data.message]);
             setTyping(false);
+            // Seen it: the GET marks the thread read, so the inbox badge doesn't come back later.
+            if (data.message.senderId !== me && document.visibilityState === "visible") void poll();
           } else if (data.type === "typing" && data.userId !== me) {
             setTyping(true);
             clearTimeout(typingTimer.current);
@@ -162,7 +167,7 @@ export function ChatThread({
           }
           const mine = m.senderId === me;
           const prev = messages[i - 1];
-          const grouped = prev && prev.senderId === m.senderId && m.createdAt - prev.createdAt < 120_000;
+          const grouped = prev?.kind === "text" && prev.senderId === m.senderId && m.createdAt - prev.createdAt < 120_000;
           return (
             <div key={m.id} className={cn("flex", mine ? "justify-end" : "justify-start", !grouped && "mt-2")}>
               <div
@@ -189,13 +194,28 @@ export function ChatThread({
                 {spots.length > 0 && (
                   <button
                     onClick={() => setShowSpots(!showSpots)}
-                    className={cn("flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-[13px] font-medium", showSpots ? "bg-ink text-ink-inverse" : "bg-surface ring-1 ring-line")}
+                    className={cn(
+                      "flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-[13px] font-medium",
+                      showSpots ? "bg-ink text-ink-inverse" : "bg-surface ring-1 ring-line",
+                    )}
                   >
                     <MapPin className="size-3.5" /> Suggest a spot
                   </button>
                 )}
+                {payNote && (
+                  <button
+                    onClick={() => suggest(payNote)}
+                    className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-accent-soft px-3 text-[13px] font-medium text-accent"
+                  >
+                    <Wallet className="size-3.5" /> How to pay me
+                  </button>
+                )}
                 {QUICK.map((q) => (
-                  <button key={q} onClick={() => suggest(q)} className="h-8 shrink-0 rounded-full bg-surface px-3 text-[13px] font-medium ring-1 ring-line">
+                  <button
+                    key={q}
+                    onClick={() => suggest(q)}
+                    className="h-8 shrink-0 rounded-full bg-surface px-3 text-[13px] font-medium ring-1 ring-line"
+                  >
                     {q}
                   </button>
                 ))}

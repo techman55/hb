@@ -7,10 +7,10 @@ import { rentalTiming, Thumb } from "@/components/rental/rental-bits";
 import { Badge } from "@/components/ui/bits";
 import { requireUser } from "@/lib/auth/current";
 import { chatOpen, listMessages, markRead } from "@/lib/chat/service";
-import { getRentalDetail } from "@/lib/rentals/detail";
+import { getRentalDetail, payHandles } from "@/lib/rentals/detail";
 import { db } from "@/lib/server";
 import { getSettings } from "@/lib/settings";
-import { firstName } from "@/lib/utils";
+import { firstName, formatMoney } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Chat" };
 
@@ -23,6 +23,8 @@ export default async function ThreadPage({ params }: PageProps<"/inbox/[rentalId
   await markRead(db(), rentalId, user.id);
   const { rental, listing, other, role, dueDate } = detail;
   const t = rentalTiming({ status: rental.status, startDate: rental.startDate, dueDate }, role);
+  const handles = role === "owner" && (rental.status === "requested" || rental.status === "accepted") ? payHandles(user) : null;
+  const payNote = handles && `You can pay me ${formatMoney(rental.totalCents)} with ${handles} before I scan your pickup code.`;
 
   return (
     <div>
@@ -46,6 +48,7 @@ export default async function ThreadPage({ params }: PageProps<"/inbox/[rentalId
         otherName={firstName(other.name, "them")}
         open={chatOpen(rental, settings.chatRetentionDays)}
         spots={detail.spots}
+        payNote={payNote}
       />
     </div>
   );

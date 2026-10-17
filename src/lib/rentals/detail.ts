@@ -50,14 +50,20 @@ export type RentalDetail = NonNullable<Awaited<ReturnType<typeof getRentalDetail
 /** Prefilled pay links. Payment itself happens outside Dibs. */
 export function payLinks(other: { venmo: string | null; cashapp: string | null }, totalCents: number, title: string) {
   const amount = (totalCents / 100).toFixed(2);
-  const note = encodeURIComponent(`Dibs: ${title}`);
   const links: { label: string; href: string }[] = [];
   if (other.venmo) {
-    links.push({
-      label: "Pay with Venmo",
-      href: `https://venmo.com/?txn=pay&audience=private&recipients=${encodeURIComponent(other.venmo)}&amount=${amount}&note=${note}`,
-    });
+    // Venmo shows the note as-is, so keep it readable: form-encoded once (spaces as "+") and no
+    // punctuation that only survives as %XX escapes.
+    const note = `${title.replace(/[^\p{L}\p{N} -]+/gu, " ").replace(/\s+/g, " ").trim()} rental via Dibs`;
+    const query = new URLSearchParams({ txn: "pay", audience: "private", amount, note });
+    links.push({ label: "Pay with Venmo", href: `https://venmo.com/${encodeURIComponent(other.venmo)}?${query}` });
   }
   if (other.cashapp) links.push({ label: "Pay with Cash App", href: `https://cash.app/$${encodeURIComponent(other.cashapp)}/${amount}` });
   return links;
+}
+
+/** "Venmo (@x) or Cash App ($y)", or null when the owner hasn't added either. */
+export function payHandles(owner: { venmo: string | null; cashapp: string | null }): string | null {
+  const apps = [owner.venmo && `Venmo (@${owner.venmo})`, owner.cashapp && `Cash App ($${owner.cashapp})`].filter(Boolean);
+  return apps.length ? apps.join(" or ") : null;
 }

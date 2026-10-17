@@ -126,13 +126,13 @@ export const notify = {
             subject: kind === "pickup" ? `Receipt: ${title} picked up` : `Receipt: ${title} returned`,
             intro,
             rows,
-            total: { label: kind === "pickup" ? "Total due" : "Total", value: total },
+            total: { label: "Total", value: total },
             links,
             footnote:
               kind === "pickup"
                 ? role === "renter"
-                  ? "Pay the owner directly. Dibs doesn't handle payments."
-                  : "Payment goes straight between you two. Dibs doesn't handle payments."
+                  ? "Payment is due before the pickup scan and goes straight to the owner. Dibs doesn't handle payments."
+                  : "Payment goes straight between you two, before the pickup scan. Dibs doesn't handle payments."
                 : "Pickup and return were both verified in person with a Dibs code.",
             cta: { label: "View rental", url: appUrl(env, role === "renter" ? `/dibs/${rental.id}` : `/lending/rentals/${rental.id}`) },
           }),
@@ -169,7 +169,7 @@ export const notify = {
           db,
           renter.id,
           kind === "pickup"
-            ? `Pickup confirmed for ${title}. It's due back ${due}. Pay ${firstName(owner.name, "the owner")} ${formatMoney(rental.totalCents)}:`
+            ? `Pickup confirmed for ${title}. It's due back ${due}. Details:`
             : `Return confirmed for ${title}. Thanks for bringing it back.`,
           renterPath(rental.id),
         ),
@@ -201,6 +201,7 @@ export const notify = {
           and(
             eq(messages.rentalId, rentalId),
             eq(messages.senderId, senderId),
+            eq(messages.kind, "text"),
             read?.at ? gt(messages.createdAt, read.at) : undefined,
           ),
         );

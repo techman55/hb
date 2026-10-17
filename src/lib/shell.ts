@@ -13,16 +13,18 @@ export type Handoff = {
   coverUrl: string | null;
 };
 
-export async function unreadThreads(db: DB, me: string): Promise<number> {
-  const rows = await db.all<{ n: number }>(sql`
-    SELECT COUNT(DISTINCT m.rental_id) AS n
+/** Chats with messages this user hasn't seen, with the newest one's time. */
+export async function unreadThreads(db: DB, me: string): Promise<{ id: string; at: number }[]> {
+  const rows = await db.all<{ id: string; at: number }>(sql`
+    SELECT m.rental_id AS id, MAX(m.created_at) AS at
     FROM messages m
     JOIN rentals r ON r.id = m.rental_id
     LEFT JOIN chat_reads cr ON cr.rental_id = m.rental_id AND cr.user_id = ${me}
     WHERE (r.renter_id = ${me} OR r.owner_id = ${me})
       AND (m.sender_id IS NULL OR m.sender_id != ${me})
-      AND (cr.last_read_at IS NULL OR m.created_at > cr.last_read_at)`);
-  return rows[0]?.n ?? 0;
+      AND (cr.last_read_at IS NULL OR m.created_at > cr.last_read_at)
+    GROUP BY m.rental_id`);
+  return rows;
 }
 
 export async function shellData(db: DB, me: string) {

@@ -46,7 +46,8 @@ export async function addMessage(
 ): Promise<ChatMessage & { online: Set<string> }> {
   const row = { id: newId("msg"), rentalId, senderId, kind, body: body.slice(0, MAX_MESSAGE), createdAt: new Date() };
   await db.insert(messages).values(row);
-  if (senderId) await markRead(db, rentalId, senderId);
+  // Only a typed message means the sender has caught up on the chat; a system note from their action doesn't.
+  if (senderId && kind === "text") await markRead(db, rentalId, senderId);
   const msg = toChat(row as Message);
   await broadcast(env, rentalId, msg);
   // Inbox lists and badges for both people (also covers every rental status change, since each posts a system message).
@@ -55,8 +56,12 @@ export async function addMessage(
   return Object.assign(msg, { online });
 }
 
-export const systemMessage = (env: Env, db: DB, rentalId: string, body: string) =>
-  addMessage(env, db, rentalId, null, body, "system");
+/**
+ * A note from Dibs about the rental. `actorId` is whoever caused it (stored as the sender), so the
+ * note isn't unread for them. Leave it out for things nobody did, like expiry.
+ */
+export const systemMessage = (env: Env, db: DB, rentalId: string, body: string, actorId: string | null = null) =>
+  addMessage(env, db, rentalId, actorId, body, "system");
 
 export async function listMessages(db: DB, rentalId: string, after?: number) {
   const rows = await db
@@ -69,10 +74,13 @@ export async function listMessages(db: DB, rentalId: string, after?: number) {
 }
 
 export async function markRead(db: DB, rentalId: string, userId: string) {
+  // Never behind the newest message: Worker isolates' clocks can differ by a few ms, which would
+  // otherwise leave a message that was just seen counted as unread.
+  const at = sql`MAX(${Date.now()}, COALESCE((SELECT MAX(created_at) FROM messages WHERE rental_id = ${rentalId}), 0))`;
   await db
     .insert(chatReads)
-    .values({ rentalId, userId, lastReadAt: new Date() })
-    .onConflictDoUpdate({ target: [chatReads.rentalId, chatReads.userId], set: { lastReadAt: new Date() } });
+    .values({ rentalId, userId, lastReadAt: at })
+    .onConflictDoUpdate({ target: [chatReads.rentalId, chatReads.userId], set: { lastReadAt: at } });
 }
 
 export type ThreadSummary = {

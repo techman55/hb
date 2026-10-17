@@ -6,6 +6,7 @@ import { House, Inbox, Plus, Search, Shield, Store, Ticket } from "lucide-react"
 import { Avatar, Wordmark } from "@/components/ui/bits";
 import { SchoolLogo, type SchoolLike } from "@/components/school-chip";
 import { cn } from "@/lib/utils";
+import { useUnread } from "./unread";
 
 export type ShellUser = { name: string | null; email: string; isAdmin: boolean };
 
@@ -64,7 +65,8 @@ export function BottomNav({ user, badges }: { user: ShellUser; badges: { dibs: n
   );
 }
 
-export function TopBar({ school, unread }: { school: SchoolLike; unread: number }) {
+export function TopBar({ school }: { school: SchoolLike }) {
+  const { inbox } = useUnread();
   return (
     <header className="sticky top-0 z-30 border-b border-line/60 bg-bg/85 pt-safe backdrop-blur-xl lg:hidden">
       <div className="mx-auto flex h-12 max-w-[680px] items-center gap-3 px-4">
@@ -79,7 +81,7 @@ export function TopBar({ school, unread }: { school: SchoolLike; unread: number 
           <Link href="/inbox" aria-label="Inbox" className="relative flex size-10 items-center justify-center rounded-full hover:bg-surface-2">
             <Inbox className="size-[21px]" />
             <span className="absolute right-1.5 top-1.5">
-              <Dot count={unread} />
+              <Dot count={inbox} />
             </span>
           </Link>
         </div>
@@ -95,9 +97,10 @@ export function SideNav({
 }: {
   user: ShellUser;
   school: SchoolLike & { name: string };
-  badges: { dibs: number; lending: number; inbox: number };
+  badges: { dibs: number; lending: number };
 }) {
   const path = usePathname();
+  const { inbox } = useUnread();
   const item = (href: string, label: string, Icon: typeof House, count = 0) => {
     const active = isActive(path, href);
     return (
@@ -132,7 +135,7 @@ export function SideNav({
         {item("/search", "Search", Search)}
         {item("/lending", "Lending", Store, badges.lending)}
         {item("/dibs", "My Dibs", Ticket, badges.dibs)}
-        {item("/inbox", "Inbox", Inbox, badges.inbox)}
+        {item("/inbox", "Inbox", Inbox, inbox)}
         {user.isAdmin && item("/admin", "Admin", Shield)}
       </nav>
       <Link

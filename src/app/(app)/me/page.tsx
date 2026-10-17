@@ -77,7 +77,7 @@ export default async function MePage() {
         )}
       </Panel>
 
-      <Panel>
+      <Panel id="profile">
         <SectionTitle>Profile</SectionTitle>
         <ProfileForm name={user.name ?? ""} venmo={user.venmo ?? ""} cashapp={user.cashapp ?? ""} />
       </Panel>

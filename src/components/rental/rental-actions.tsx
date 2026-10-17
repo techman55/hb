@@ -9,9 +9,22 @@ import { useConfirm } from "@/components/ui/confirm";
 import { answerDibs, cancelDibs } from "@/app/actions/rentals";
 import { HandoffScanner } from "./scanner";
 
-export function OwnerActions({ rentalId, status, renterName }: { rentalId: string; status: string; renterName: string }) {
+export function OwnerActions({
+  rentalId,
+  status,
+  renterName,
+  total,
+  handles,
+}: {
+  rentalId: string;
+  status: string;
+  renterName: string;
+  total: string;
+  handles: string | null;
+}) {
   const router = useRouter();
-  const [scanning, setScanning] = useState(false);
+  // Locked when the scanner opens, so a refresh mid-scan (accepted → active) can't flip pickup into return.
+  const [scanning, setScanning] = useState<"pickup" | "return" | null>(null);
   const [pending, start] = useTransition();
   const ask = useConfirm();
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) =>
@@ -50,7 +63,24 @@ export function OwnerActions({ rentalId, status, renterName }: { rentalId: strin
         </div>
       )}
       {(status === "accepted" || status === "active") && (
-        <Button size="lg" className="w-full" onClick={() => setScanning(true)}>
+        <Button
+          size="lg"
+          className="w-full"
+          onClick={async () => {
+            if (status === "active") return setScanning("return");
+            // Payment comes first: once the pickup is scanned, the rental is on.
+            const paid = await ask({
+              title: `Did ${renterName} pay you ${total}?`,
+              description: handles
+                ? `If not, let them know they can pay you with ${handles} right now. Scan only once you have the money.`
+                : "Collect payment before you scan. The scan confirms the pickup.",
+              confirmLabel: "Yes, scan code",
+              cancelLabel: "Not yet",
+              tone: "default",
+            });
+            if (paid) setScanning("pickup");
+          }}
+        >
           <ScanLine className="size-5" /> {status === "accepted" ? "Scan pickup code" : "Scan return code"}
         </Button>
       )}
@@ -78,11 +108,11 @@ export function OwnerActions({ rentalId, status, renterName }: { rentalId: strin
       {scanning && (
         <HandoffScanner
           rentalId={rentalId}
-          action={status === "accepted" ? "pickup" : "return"}
+          action={scanning}
           renterName={renterName}
-          onClose={() => setScanning(false)}
+          onClose={() => setScanning(null)}
           onDone={() => {
-            setScanning(false);
+            setScanning(null);
             router.refresh();
           }}
         />

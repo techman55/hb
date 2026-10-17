@@ -58,7 +58,7 @@ export function HandoffScanner({
       const res = await fetch(`/api/rentals/${rentalId}/handoff`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code: value }),
+        body: JSON.stringify({ code: value, action }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "That didn't work");
@@ -134,8 +134,10 @@ export function HandoffScanner({
           >
             <Check className="size-12" strokeWidth={3} />
           </motion.span>
-          <p className="mt-6 text-2xl font-bold">{action === "pickup" ? "Picked up" : "Returned"}</p>
-          <p className="mt-1 text-white/70">Verified in person with {renterName}.</p>
+          <p className="mt-6 text-2xl font-bold">{action === "pickup" ? "Rented out" : "Returned"}</p>
+          <p className="mt-1 text-white/70">
+            {action === "pickup" ? `Handed off to ${renterName}, verified in person.` : `Back from ${renterName}, verified in person.`}
+          </p>
         </div>
       ) : mode === "camera" ? (
         <div className="relative flex-1">

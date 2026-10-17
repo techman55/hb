@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Inbox } from "lucide-react";
 import { Thumb } from "@/components/rental/rental-bits";
+import { ThreadLink } from "@/components/shell/unread";
 import { Avatar, EmptyState, SectionTitle } from "@/components/ui/bits";
 import { requireUser } from "@/lib/auth/current";
 import { listThreads } from "@/lib/chat/service";
 import { incomingRequests } from "@/lib/friends";
 import { mediaUrl } from "@/lib/media";
 import { db } from "@/lib/server";
-import { cn, timeAgo } from "@/lib/utils";
+import { timeAgo } from "@/lib/utils";
 import { FriendButtons } from "../me/me-client";
 
 export const metadata: Metadata = { title: "Inbox" };
@@ -54,21 +55,27 @@ export default async function InboxPage() {
             <ul className="flex flex-col gap-1">
               {threads.map((t) => (
                 <li key={t.rentalId}>
-                  <Link href={`/inbox/${t.rentalId}`} className="flex items-center gap-3 rounded-3xl p-2.5 transition hover:bg-surface">
+                  <ThreadLink
+                    rentalId={t.rentalId}
+                    unread={t.unread > 0}
+                    className="group flex items-center gap-3 rounded-3xl p-2.5 transition hover:bg-surface"
+                  >
                     <Thumb src={mediaUrl(t.cover)} className="size-14" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className={cn("truncate", t.unread ? "font-bold" : "font-semibold")}>{t.otherName ?? "A student"}</p>
+                        <p className="truncate font-semibold group-data-unread:font-bold">{t.otherName ?? "A student"}</p>
                         {t.lastAt && <span className="shrink-0 text-xs text-muted">{timeAgo(t.lastAt)}</span>}
                       </div>
                       <p className="truncate text-xs text-muted">
                         {t.role === "owner" ? "Renting your " : "Your rental: "}
                         {t.title}
                       </p>
-                      <p className={cn("truncate text-sm", t.unread ? "font-semibold text-ink" : "text-muted")}>{t.lastBody ?? "No messages yet"}</p>
+                      <p className="truncate text-sm text-muted group-data-unread:font-semibold group-data-unread:text-ink">
+                        {t.lastBody ?? "No messages yet"}
+                      </p>
                     </div>
-                    {t.unread > 0 && <span className="size-2.5 shrink-0 rounded-full bg-accent" aria-label={`${t.unread} unread`} />}
-                  </Link>
+                    <span className="hidden size-2.5 shrink-0 rounded-full bg-accent group-data-unread:block" aria-label="Unread" />
+                  </ThreadLink>
                 </li>
               ))}
             </ul>
