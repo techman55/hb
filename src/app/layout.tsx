@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   description: "Rent what you need for a day or a week from students at your school.",
   metadataBase: new URL("https://dibs.school"),
   openGraph: { siteName: "Dibs", type: "website" },
+  // Icons and the web manifest come from the app/ file conventions (favicon.ico, apple-icon.png,
+  // manifest.ts); this adds the iOS home-screen title.
+  appleWebApp: { title: "Dibs" },
 };
 
 export const viewport: Viewport = {
