@@ -40,7 +40,8 @@ export function BottomNav({ user, badges }: { user: ShellUser; badges: { dibs: n
   );
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/90 pb-safe backdrop-blur-xl lg:hidden">
-      <div className="mx-auto flex max-w-md items-end">
+      {/* Fixed 52px row: bars that sit on top of the nav (listing page) are positioned from this height plus .pb-safe. */}
+      <div className="mx-auto flex h-[52px] max-w-md items-end">
         {tab("/", "Home", <House className="size-[22px]" strokeWidth={isActive(path, "/") ? 2.4 : 1.8} />)}
         {tab("/lending", "Lending", <Store className="size-[22px]" strokeWidth={isActive(path, "/lending") ? 2.4 : 1.8} />, badges.lending)}
         <div className="flex flex-1 justify-center">

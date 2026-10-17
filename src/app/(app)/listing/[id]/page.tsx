@@ -116,7 +116,7 @@ export default async function ListingPage({ params }: PageProps<"/listing/[id]">
         </p>
       )}
 
-      <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+64px)] z-30 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur lg:sticky lg:bottom-4 lg:mt-8 lg:rounded-3xl lg:border lg:shadow-lg">
+      <div className="fixed inset-x-0 bottom-[calc(max(env(safe-area-inset-bottom),0.75rem)+52px)] z-30 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur lg:sticky lg:bottom-4 lg:mt-8 lg:rounded-3xl lg:border lg:shadow-lg">
         <div className="mx-auto flex max-w-[680px] items-center gap-3">
           {isOwner ? (
             <>
